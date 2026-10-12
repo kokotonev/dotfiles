@@ -1,0 +1,46 @@
+# This file has been symlinked from $HOME/.dotfiles
+
+# Set $ZSH to point to the repo's location. Other files use it to find the repo.
+export ZSH=$HOME/.dotfiles
+
+# My projects folder that we can `c <project_name>` to jump directly to a certain project folder
+export PROJECTS=$HOME/Documents/Projects
+
+# Put your environment variables (especially secrets, API tokens, etc.) in ~/.localrc. 
+# This file lives outside of your main dotfiles repository and is only loaded now.
+# It is loaded before the topic files, so you'll have access to them in your scripts.
+if [[ -a ~/.localrc ]]
+then
+  source ~/.localrc
+fi
+
+# Find all of the .zsh files across all topic folders
+typeset -U config_files  # -U flag drops duplicate entries automatically
+config_files=($ZSH/**/*.zsh)
+
+# Start loading the .zsh files in 3 phases...
+
+# Load only the path.zsh files from all topic folders
+for file in ${(M)config_files:#*/path.zsh}
+do
+  source $file
+done
+
+# Load everything, except the path.zsh and completion.zsh files
+for file in ${${config_files:#*/path.zsh}:#*/completion.zsh}
+do
+  source $file
+done
+
+# Initialize the Zsh's tab completion here, otherwise functions won't be loaded
+autoload -U compinit
+compinit
+
+# Load every completion.zsh file from all topic folders after autocomplete loads
+for file in ${(M)config_files:#*/completion.zsh}
+do
+  source $file
+done
+
+# Clean up
+unset config_files

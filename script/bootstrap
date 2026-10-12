@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+#
+# This script takes care of creating the correct symlinks for every <topic>/<name>.symlink to ~/.<name>
+# and handles gracefully the cases where these files already exist.
+# Please read the inline comments for more info.
+
+# Portions of this file are derived from:
+# https://github.com/holman/dotfiles
+#
+# Copyright (c) Zach Holman
+# Licensed under the MIT License.
+# See licenses/holman-mit.md
+
+# Navigate to the root of the dotfiles directory and save it in a variable
+cd "$(dirname "$0")/.."
+DOTFILES_ROOT=$(pwd -P)
+
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+echo ''  # empty line
+
+# Output formatting helpers
+info () {
+  printf "\r  [ \033[00;34minfo\033[0m ] $1\n"  # [ info ] in blue
+}
+
+ask_user () {
+  printf "\r  [ \033[0;33m??\033[0m ] $1\n"  # [ ?? ] in yellow
+}
+
+success () {
+  printf "\r\033[2K  [ \033[00;32mOK\033[0m ] $1\n"  # [ OK ] in green
+}
+
+fail () {
+  printf "\r\033[2K  [\033[0;31mFAIL\033[0m] $1\n"  # [FAIL] in red
+  echo ''
+  exit
+}
+
+# Creates a personal fit config file from a template if it doesn't already exist. Asks for user input to fill in the template.
+setup_gitconfig () {
+  if ! [ -f git/gitconfig.local.symlink ]
+  then
+    info 'Setup gitconfig'
+
+    # Picks a git credential helper, depending on the OS. Defaults to 'cache' for Linux and 'osxkeychain' for Mac.
+    git_credential='cache'
+    if [ "$(uname -s)" == "Darwin" ]
+    then
+      git_credential='osxkeychain'
+    fi
+
+    # Takes user input for the git author name and email.
+    ask_user ' - What is your github author name?'
+    read -e git_authorname
+    ask_user ' - What is your github author email?'
+    read -e git_authoremail
+
+    # Creates the gitconfig.local.symlink file from the template, replacing AUTHORNAME, AUTHOREMAIL and GIT_CREDENTIAL_HELPER with the user input.
+    sed -e "s/AUTHORNAME/$git_authorname/g" -e "s/AUTHOREMAIL/$git_authoremail/g" -e "s/GIT_CREDENTIAL_HELPER/$git_credential/g" git/gitconfig.local.symlink.example > git/gitconfig.local.symlink
+
+    success 'gitconfig.local.symlink created'
+  fi
+}
+
+
+# Creates a single symlink from the source file (file in the repo) to the destination file (where it goes in $HOME).
+link_file () {
+  
+  # Takes two arguments: the source file and the destination file.
+  local src=$1 dst=$2
+
+  local overwrite= backup= skip=
+  local action=
+
+  # Checks if the destination file already exists (-f), is a directory (-d), or is a symlink (-L).
+  if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]
+  then
+
+    # If the user has not already chosen to overwrite all, backup all, or skip all, then ask the user what to do.
+    if [ "$overwrite_all" == "false" ] && [ "$backup_all" == "false" ] && [ "$skip_all" == "false" ]
+    then
+
+      # Checks if dst is already a symlink. If not, this will be empty.
+      local currentSrc="$(readlink $dst)"
+
+      # If it is already a symlink and points to the same source file, then we can skip it without asking the user.
+      if [ "$currentSrc" == "$src" ]
+      then
+        skip=true;
+
+      else
+        # If it is not a symlink or points to a different source file, then ask the user what to do.
+        ask_user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
+        [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
+        read -n 1 action
+
+        # Update the overwrite, backup, and skip variables based on the user's choice.
+        case "$action" in
+          o )
+            overwrite=true;;
+          O )
+            overwrite_all=true;;
+          b )
+            backup=true;;
+          B )
+            backup_all=true;;
+          s )
+            skip=true;;
+          S )
+            skip_all=true;;
+          * )
+            ;;
+        esac
+
+      fi
+
+    fi
+
+    # If the user has already chosen to overwrite all, backup all, or skip all, then we use those choices for this file as well.
+    overwrite=${overwrite:-$overwrite_all}
+    backup=${backup:-$backup_all}
+    skip=${skip:-$skip_all}
+
+    # If the user has chosen to overwrite, we delete the existing file/directory/symlink.
+    if [ "$overwrite" == "true" ]
+    then
+      rm -rf "$dst"
+      success "Removed $dst"
+    fi
+
+    # If the user has chosen to backup, we move the existing file/directory/symlink to a new location with a .backup extension.
+    if [ "$backup" == "true" ]
+    then
+      mv "$dst" "${dst}.backup"
+      success "Moved $dst to ${dst}.backup"
+    fi
+
+    # If the user has chosen to skip, we just print a message and do not create the symlink.
+    if [ "$skip" == "true" ]
+    then
+      success "Skipped $src"
+    fi
+  fi
+
+  # If the user has not chosen to skip, we create the symlink from the source file to the destination file.
+  if [ "$skip" != "true" ]  # "false" or empty
+  then
+    ln -s "$1" "$2"
+    success "Successfully linked $1 to $2"
+  fi
+}
+
+# Installs the dotfiles by creating symlinks for each .symlink file in the repository to the corresponding location in the $HOME directory.
+install_dotfiles () {
+  info 'Installing dotfiles...'
+
+  local overwrite_all=false backup_all=false skip_all=false
+
+  # Finds all files in the repository with the .symlink extension, excluding any files in .git directories.
+  for src in $(find -H "$DOTFILES_ROOT" -maxdepth 2 -name '*.symlink' -not -path '*.git*')
+  do
+    # Builds the destination path by taking the basename of the source file (without the .symlink extension) and prepending a dot to it
+    dst="$HOME/.$(basename "${src%.*}")"
+    # Calls the link_file function to create the symlink from the source file to the destination file.
+    link_file "$src" "$dst"
+  done
+}
+
+# Calling the above functions to setup gitconfig and install dotfiles.
+setup_gitconfig
+install_dotfiles
+
+# TODO
+# If we're on a Mac, let's install and setup homebrew.
+# if [ "$(uname -s)" == "Darwin" ]
+# then
+#   info "installing dependencies"
+#   if source bin/dot | while read -r data; do info "$data"; done
+#   then
+#     success "dependencies installed"
+#   else
+#     fail "error installing dependencies"
+#   fi
+# fi
+
+echo ''  # empty line
+
+success '  Configuration complete!'

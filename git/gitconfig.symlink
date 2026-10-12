@@ -1,0 +1,31 @@
+[color]
+	diff = auto
+	status = auto
+	branch = auto
+	ui = true
+[core]
+	excludesfile = ~/.gitignore
+	autocrlf = input
+	# Set VSCode as default editor
+	editor = code --wait
+[apply]
+	whitespace = nowarn
+[mergetool]
+	keepBackup = false
+[difftool]
+	prompt = false
+[help]
+	# Upon a typo, git will ask whether to run the closest match
+	autocorrect = prompt
+[push]
+	# Pushes a new local branch to remote with a simple `git push` without having to specify anything additional
+	autoSetupRemote = true
+[init]
+	defaultBranch = master
+[pull]
+	rebase = true
+
+# Local config (gitconfig.local) goes in the include as it is not part of the tracked files.
+# It is included last so that its values override the ones above.
+[include]
+	path = ~/.gitconfig.local

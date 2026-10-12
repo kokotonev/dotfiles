@@ -1,0 +1,22 @@
+#!/bin/zsh
+#
+# -------------------------------
+# Copyright (c) Zach Holman
+# Licensed under the MIT License.
+# See licenses/holman-mit.md
+# -------------------------------
+#
+# This lets you quickly jump into a project directory.
+#
+# Type:
+#
+#   c <tab>
+#
+# ...to autocomplete on all of your projects in the directories specified in
+# `functions/_c`. Typically I'm using it like:
+#
+#    c holm<tab>/bo<tab>
+#
+# ...to quickly jump into holman/boom, for example.
+
+cd "$PROJECTS/$1"
