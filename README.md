@@ -17,7 +17,7 @@ bash ~/.dotfiles/script/bootstrap
 
 Then open a new terminal.
 
-`script/bootstrap` does two things:
+`script/bootstrap` does three things:
 
 1. **Creates your local git config.** It asks for your git author name and email and generates `git/gitconfig.local.symlink` from `git/gitconfig.local.symlink.example`. The credential helper is set to `osxkeychain` on macOS and `cache` on Linux. The generated file is gitignored, and the step is skipped if the file already exists.
 2. **Links the dotfiles.** Every `<topic>/<name>.symlink` becomes a symlink at `~/.<name>`. If a file already exists there, you're asked what to do:
@@ -27,15 +27,43 @@ Then open a new terminal.
 
    Press only one of these keys. Any other key, including Enter, aborts the script. Nothing is lost if that happens; just run it again.
 
+3. **Installs software (macOS only).** It runs `bin/dotfiles-update`, which:
+   - pulls the latest dotfiles,
+   - installs [Homebrew](https://brew.sh) if it's missing (asks for your password), then runs `brew update` and `brew upgrade`,
+   - runs `script/install`, which installs everything in the [Brewfile](Brewfile) with `brew bundle` and then runs every `<topic>/install.sh` (e.g. `python/install.sh` installs the latest Python with uv).
+
+   If an app from the Brewfile is already in `/Applications` but wasn't installed with Homebrew, `brew bundle` reports it as failed and moves on. To hand such an app over to Homebrew, run `brew install --cask --force <cask>` once.
+
 You can run bootstrap again at any time. Files that already point to the right place are skipped without asking. Answering `b` again for a file replaces any existing `.backup` of it.
 
-Bootstrap does **not** install any software. The config expects these tools:
+To update the dotfiles and all software later, run `dotfiles-update` from any terminal.
+
+These tools aren't installed by bootstrap, but the config uses them if they're there:
 
 | Tool | Expected location | Used by | If it's missing |
 |---|---|---|---|
 | [nvm](https://github.com/nvm-sh/nvm) | `~/.nvm` | `node/` | Skipped quietly |
 | [Google Cloud SDK](https://cloud.google.com/sdk) | `~/Documents/google-cloud-sdk` | `gcloud/` | Skipped quietly |
-| VS Code `code` command | on `$PATH` | `git/` (commit editor) | git can't open an editor, e.g. for commits without `-m` |
+| VS Code `code` command | on `$PATH` | `git/` (commit editor) | git can't open an editor, e.g. for commits without `-m`. Installing the `visual-studio-code` cask provides it. |
+
+### Python
+
+Python is managed by [uv](https://docs.astral.sh/uv/), not Homebrew. `python` and `python3` live in `~/.local/bin`.
+
+- `uv python install 3.13`: install another version; `uv python list`: see what's installed
+- `uv init` / `uv add <package>` / `uv sync`: manage a project and its `.venv`
+- `uv tool install <tool>`: install a command-line tool globally (e.g. `ruff`, `ipython`)
+
+### PostgreSQL
+
+The Brewfile installs `postgresql@18`. Its data lives in `/opt/homebrew/var/postgresql@18`, and your macOS user is the superuser (no password locally).
+
+| Command | What it does |
+|---|---|
+| `brew services start postgresql@18` | Start the server now and on every login |
+| `brew services stop postgresql@18` | Stop it and don't start it on login |
+| `brew services run postgresql@18` | Start it now only, not on login |
+| `brew services list` | Show whether it's running |
 
 ## How it works
 

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# dotfiles-update
+#
+# `dotfiles-update` handles updating the dotfiles themselves, as well as installing and updating all dependencies. 
+# Run it periodically to make sure you're on the latest and greatest.
+
+set -e
+
+parentDirectory="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd -P)"
+dotfilesDirectory="$(cd "$( dirname "$parentDirectory" )" && pwd -P)"
+
+displayUsage() {
+	echo "dotfiles-update -- dotfiles management"
+	echo ""
+	echo "Usage: dotfiles-update [options]"
+	echo ""
+	echo "Options:"
+	echo "  -e, --edit    Open dotfiles directory for editing"
+	echo "  -h, --help    Show this help message and exit"
+}
+
+# Parse command line arguments
+while test $# -gt 0; do
+	case "$1" in
+		"-h"|"--help")
+			displayUsage
+			exit 0
+			;;
+		"-e"|"--edit")
+			exec "$EDITOR" "$dotfilesDirectory"
+			exit
+			;;
+		*)
+			echo "Invalid option: $1"
+			displayUsage
+			exit 1
+			;;
+	esac
+	shift
+done
+
+export ZSH="$dotfilesDirectory"
+
+# Update dotfiles themselves. Not fatal: local changes or a missing upstream shouldn't block installing software.
+echo "Updating dotfiles..."
+echo "› git pull"
+git -C "$ZSH" pull --ff-only || echo "Couldn't pull the latest dotfiles, continuing with the local copy"
+
+# Install homebrew
+"$ZSH/homebrew/bootstrap.sh" 2>&1
+
+# Add Homebrew to PATH (bootstrap.sh runs in its own process, so it doesn't affect this script's PATH)
+. "$ZSH/homebrew/path.zsh"
+
+# Upgrade homebrew
+echo "› brew update"
+brew update
+
+echo "› brew upgrade"
+brew upgrade
+
+# Install software
+echo "› script/install"
+"$ZSH/script/install"

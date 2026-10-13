@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# Run all topic dotfiles installers.
+
+set -e
+
+cd "$(dirname $0)"/..
+
+if ! command -v brew >/dev/null 2>&1
+then
+  echo "Homebrew isn't installed. Run homebrew/bootstrap.sh (or bin/dotfiles-update) first." >&2
+  exit 1
+fi
+
+# Keg-only formulae aren't linked into PATH by default, so link the ones we want
+link_keg_only() {
+  for formula in $(brew list --formula -1 | grep '^postgresql@')
+  do
+    # Homebrew keeps a symlink here for every linked keg, so skip the ones already linked
+    [ -L "$(brew --prefix)/var/homebrew/linked/$formula" ] && continue
+    brew link --force "$formula" || echo "Couldn't link $formula" >&2
+  done
+}
+
+echo "Installing dependencies from Brewfile..."
+echo "› brew bundle"
+# Not fatal: e.g. a cask whose app is already in /Applications fails, but everything else still installs
+brew bundle || echo "Some Brewfile entries failed to install (see above), continuing"
+
+echo "Linking keg-only formulae..."
+link_keg_only
+
+# find the installers and run them iteratively
+echo "Running topic installers..."
+find . -name install.sh | while read installer ; do sh -c "${installer}" ; done
