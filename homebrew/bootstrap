@@ -3,7 +3,8 @@
 # Homebrew
 #
 # Installs Homebrew if it's missing. Called directly by bin/dotfiles-update; it's not
-# named install.sh so script/install doesn't run it a second time.
+# named install.sh so script/install doesn't run it a second time. It has no .sh extension
+# so the shells don't source it as config.
 
 # Adding Homebrew to PATH if it's installed, but not on PATH yet. Doing nothing if it is not installed.
 . "$(dirname "$0")/path.zsh"

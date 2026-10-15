@@ -1,7 +1,7 @@
 # This file has been symlinked from $HOME/.dotfiles
 
-# Set $ZSH to point to the repo's location. Other files use it to find the repo.
-export ZSH=$HOME/.dotfiles
+# Set $DOTFILES to point to the repo's location. Other files use it to find the repo.
+export DOTFILES=$HOME/.dotfiles
 
 # My projects folder that we can `c <project_name>` to jump directly to a certain project folder
 export PROJECTS=$HOME/Documents/Projects
@@ -14,20 +14,24 @@ then
   source ~/.localrc
 fi
 
-# Find all of the .zsh files across all topic folders
+# Find all of the .sh (shared with bash) and .zsh (zsh only) files across all topic folders.
+# One glob, so both kinds are sorted together alphabetically by path.
 typeset -U config_files  # -U flag drops duplicate entries automatically
-config_files=($ZSH/**/*.zsh)
+config_files=($DOTFILES/**/*.(sh|zsh))
 
-# Start loading the .zsh files in 3 phases...
+# Remove all `install.sh` files from the list, as they are installers run by script/install, not shell config
+config_files=(${config_files:#*/install.sh})
 
-# Load only the path.zsh files from all topic folders
-for file in ${(M)config_files:#*/path.zsh}
+# Start loading the files in 3 phases...
+
+# Load only the path files from all topic folders
+for file in ${(M)config_files:#*/path.*}
 do
   source $file
 done
 
-# Load everything, except the path.zsh and completion.zsh files
-for file in ${${config_files:#*/path.zsh}:#*/completion.zsh}
+# Load everything, except the path and completion files
+for file in ${${config_files:#*/path.*}:#*/completion.*}
 do
   source $file
 done
@@ -36,8 +40,8 @@ done
 autoload -U compinit
 compinit
 
-# Load every completion.zsh file from all topic folders after autocomplete loads
-for file in ${(M)config_files:#*/completion.zsh}
+# Load every completion file from all topic folders after autocomplete loads
+for file in ${(M)config_files:#*/completion.*}
 do
   source $file
 done

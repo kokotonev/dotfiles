@@ -28,7 +28,8 @@ while test $# -gt 0; do
 			exit 0
 			;;
 		"-e"|"--edit")
-			exec "$EDITOR" "$dotfilesDirectory"
+			# Unquoted, so an EDITOR with arguments (e.g. `code --wait`) is split into command and args
+			exec ${EDITOR:-nano} "$dotfilesDirectory"
 			exit
 			;;
 		*)
@@ -40,18 +41,18 @@ while test $# -gt 0; do
 	shift
 done
 
-export ZSH="$dotfilesDirectory"
+export DOTFILES="$dotfilesDirectory"
 
 # Update dotfiles themselves. Not fatal: local changes or a missing upstream shouldn't block installing software.
 echo "Updating dotfiles..."
 echo "› git pull"
-git -C "$ZSH" pull --ff-only || echo "Couldn't pull the latest dotfiles, continuing with the local copy"
+git -C "$DOTFILES" pull --ff-only || echo "Couldn't pull the latest dotfiles, continuing with the local copy"
 
 # Install homebrew
-"$ZSH/homebrew/bootstrap.sh" 2>&1
+"$DOTFILES/homebrew/bootstrap" 2>&1
 
-# Add Homebrew to PATH (bootstrap.sh runs in its own process, so it doesn't affect this script's PATH)
-. "$ZSH/homebrew/path.zsh"
+# Add Homebrew to PATH (bootstrap runs in its own process, so it doesn't affect this script's PATH)
+. "$DOTFILES/homebrew/path.zsh"
 
 # Upgrade homebrew
 echo "› brew update"
@@ -62,4 +63,4 @@ brew upgrade
 
 # Install software
 echo "› script/install"
-"$ZSH/script/install"
+"$DOTFILES/script/install"

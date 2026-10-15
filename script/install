@@ -8,7 +8,7 @@ cd "$(dirname $0)"/..
 
 if ! command -v brew >/dev/null 2>&1
 then
-  echo "Homebrew isn't installed. Run homebrew/bootstrap.sh (or bin/dotfiles-update) first." >&2
+  echo "Homebrew isn't installed. Run homebrew/bootstrap (or bin/dotfiles-update) first." >&2
   exit 1
 fi
 

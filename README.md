@@ -6,7 +6,7 @@ The structure and design approach behind this repo were inspired by Zach Holman'
 
 ## Install
 
-The repo must live at `~/.dotfiles`, because `zshrc` points `$ZSH` there and the symlinks point into it.
+The repo must live at `~/.dotfiles`, because `zshrc` points `$DOTFILES` there and the symlinks point into it.
 
 ```sh
 git clone https://github.com/kokotonev/dotfiles.git ~/.dotfiles
@@ -44,7 +44,7 @@ These tools aren't installed by bootstrap, but the config uses them if they're t
 |---|---|---|---|
 | [nvm](https://github.com/nvm-sh/nvm) | `~/.nvm` | `node/` | Skipped quietly |
 | [Google Cloud SDK](https://cloud.google.com/sdk) | `~/Documents/google-cloud-sdk` | `gcloud/` | Skipped quietly |
-| VS Code `code` command | on `$PATH` | `git/` (commit editor) | git can't open an editor, e.g. for commits without `-m`. Installing the `visual-studio-code` cask provides it. |
+| VS Code `code` command | on `$PATH` | `shell/editor.sh` (`$EDITOR`, used by git for commit messages) | `$EDITOR` falls back to `nano`. Installing the `visual-studio-code` cask provides it. |
 
 ### Python
 
@@ -67,13 +67,22 @@ The Brewfile installs `postgresql@18`. Its data lives in `/opt/homebrew/var/post
 
 ## How it works
 
-Everything is grouped into topic folders (`git/`, `zsh/`, `node/`, …). `~/.zshrc` loads every `*.zsh` file in every topic, in three phases:
+Everything is grouped into topic folders (`git/`, `zsh/`, `node/`, …). The file extension says which shell a file is for:
+
+| Extension | Use it for |
+|---|---|
+| `.sh` | Shared config: aliases, `PATH`, exports. Write it so it works in both zsh and bash (no `setopt`, `zstyle`, `%F{…}` and so on). |
+| `.zsh` | zsh-only config |
+
+`~/.zshrc` loads every `*.sh` and `*.zsh` file in every topic, sorted alphabetically by path, in three phases:
 
 | File | When it's loaded | Use it for |
 |---|---|---|
-| `<topic>/path.zsh` | First | `$PATH` and other environment setup |
-| `<topic>/*.zsh` | Second | Aliases, options, prompt, everything else |
-| `<topic>/completion.zsh` | Last, after `compinit` | Tab completion |
+| `<topic>/path.sh` or `path.zsh` | First | `$PATH` and other environment setup |
+| `<topic>/*.sh` or `*.zsh` | Second | Aliases, options, prompt, everything else |
+| `<topic>/completion.sh` or `completion.zsh` | Last, after `compinit` | Tab completion |
+
+`install.sh` files are skipped, since they're installers (see below), not config. Any other script that shouldn't be sourced, like `homebrew/bootstrap`, has no `.sh` extension.
 
 A few other kinds of file have a special role:
 
@@ -91,21 +100,22 @@ Edit files in `~/.dotfiles`. The symlinks make your home directory see the chang
 | Change | What to do afterwards |
 |---|---|
 | Edit an existing file | git uses the new value on the next command. For zsh, open a new terminal or run `exec zsh`. |
-| Add a new `*.zsh` file or a new topic folder | Nothing; every new shell picks it up. |
+| Add a new `*.sh` or `*.zsh` file or a new topic folder | Nothing; every new shell picks it up. |
 | Add a function to `functions/` | Open a new terminal. |
 | Add a new `*.symlink` file | Run `script/bootstrap` again. It links only the new file. |
 | Change your git name, email or credential helper | Edit `git/gitconfig.local.symlink` directly. To be asked again, delete it and re-run bootstrap. |
 
 Then commit and push. On other machines, `git pull` in `~/.dotfiles` applies the changes.
 
-Some installers (conda, gcloud, nvm) append lines to `~/.zshrc`. Because that file is a symlink, those lines end up in `zsh/zshrc.symlink` and show up in `git status`. Move them into a topic's `path.zsh`, or into `~/.localrc` if they're machine-specific.
+Some installers (conda, gcloud, nvm) append lines to `~/.zshrc`. Because that file is a symlink, those lines end up in `zsh/zshrc.symlink` and show up in `git status`. Move them into a topic's `path.sh` (or `path.zsh` if they're zsh-specific), or into `~/.localrc` if they're machine-specific.
 
 ## Handy commands
 
 - `c <project>`: jump to a folder in `~/Documents/Projects`, with tab completion
 - `reload!`: re-source `~/.zshrc`
-- `pubkey`: copy `~/.ssh/id_ed25519.pub` to the clipboard
-- Git shortcuts (`gs`, `ga`, `gcm`, `glog`, …): see [git/aliases.zsh](git/aliases.zsh)
+- `pubkey`: copy `~/.ssh/id_ed25519.pub` to the clipboard (or print it where there's no clipboard)
+- `ll`: long listing of all files, with colours
+- Git shortcuts (`gs`, `ga`, `gcm`, `glog`, …): see [git/aliases.sh](git/aliases.sh)
 
 The prompt shows the current git branch and how many commits haven't been pushed yet.
 

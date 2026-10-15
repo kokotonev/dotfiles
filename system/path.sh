@@ -1,2 +1,2 @@
 # Make the dotfiles' own commands (e.g. `dotfiles-update`) available everywhere
-export PATH="$ZSH/bin:$PATH"
+export PATH="$DOTFILES/bin:$PATH"

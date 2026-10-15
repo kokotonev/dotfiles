@@ -6,8 +6,6 @@
 [core]
 	excludesfile = ~/.gitignore
 	autocrlf = input
-	# Set VSCode as default editor
-	editor = code --wait
 [apply]
 	whitespace = nowarn
 [mergetool]
