@@ -52,7 +52,7 @@ git -C "$DOTFILES" pull --ff-only || echo "Couldn't pull the latest dotfiles, co
 "$DOTFILES/homebrew/bootstrap" 2>&1
 
 # Add Homebrew to PATH (bootstrap runs in its own process, so it doesn't affect this script's PATH)
-. "$DOTFILES/homebrew/path.zsh"
+. "$DOTFILES/homebrew/path.sh"
 
 # Upgrade homebrew
 echo "› brew update"

@@ -1,0 +1,57 @@
+# This file has been symlinked from $HOME/.dotfiles
+#
+# The .bash files work with any bash from 3.2 up: the one macOS ships, and the one on any Linux server,
+# however old. So no `mapfile`, `PROMPT_COMMAND` arrays, `**` globs or other bash 4+ features.
+
+# Only load this in interactive shells. Scripts run by bash shouldn't get aliases, prompt, etc.
+[[ $- == *i* ]] || return
+
+# Set $DOTFILES to point to the repo's location. Other files use it to find the repo.
+export DOTFILES=$HOME/.dotfiles
+
+# My projects folder that we can `c <project_name>` to jump directly to a certain project folder
+export PROJECTS=$HOME/Projects
+
+# Put your environment variables (especially secrets, API tokens, etc.) in ~/.localrc.
+# This file lives outside of your main dotfiles repository and is only loaded now.
+# It is loaded before the topic files, so you'll have access to them in your scripts.
+[[ -f ~/.localrc ]] && source ~/.localrc
+
+# Find all of the .sh (shared with zsh) and .bash (bash only) files across all topic folders.
+# One glob, so both kinds are sorted together alphabetically by path, like in zshrc.
+# install.sh files are installers run by script/install, not shell config.
+config_files=()
+for file in "$DOTFILES"/*/*
+do
+  [[ ($file == *.sh || $file == *.bash) && $file != */install.sh ]] && config_files+=("$file")
+done
+
+# Start loading the files in 3 phases...
+
+# Load only the path files from all topic folders
+for file in "${config_files[@]}"
+do
+  [[ $file == */path.* ]] && source "$file"
+done
+
+# Load everything, except the path and completion files
+for file in "${config_files[@]}"
+do
+  [[ $file != */path.* && $file != */completion.* ]] && source "$file"
+done
+
+# Load bash-completion (bash's counterpart of zsh's compinit), which provides completion for git, ssh, apt, etc.
+# Login shells may already have loaded it from /etc/profile.d.
+if [[ -z $BASH_COMPLETION_VERSINFO && -f /usr/share/bash-completion/bash_completion ]]
+then
+  source /usr/share/bash-completion/bash_completion
+fi
+
+# Load every completion file from all topic folders after bash-completion loads
+for file in "${config_files[@]}"
+do
+  [[ $file == */completion.* ]] && source "$file"
+done
+
+# Clean up
+unset config_files file
