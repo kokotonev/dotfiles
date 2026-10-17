@@ -20,26 +20,10 @@ DOTFILES_ROOT=$(pwd -P)
 set -e
 set -o pipefail
 
+# Output formatting helpers: info, ask_user, success, warn, error
+. "$DOTFILES_ROOT/script/output_format"
+
 echo ''  # empty line
-
-# Output formatting helpers
-info () {
-  printf "\r  [ \033[00;34minfo\033[0m ] %s\n" "$1"  # [ info ] in blue
-}
-
-ask_user () {
-  printf "\r  [ \033[0;33m??\033[0m ] $1\n"  # [ ?? ] in yellow
-}
-
-success () {
-  printf "\r\033[2K  [ \033[00;32mOK\033[0m ] %s\n" "$1"  # [ OK ] in green
-}
-
-fail () {
-  printf "\r\033[2K  [\033[0;31mFAIL\033[0m] %s\n" "$1"  # [FAIL] in red
-  echo ''
-  exit 1
-}
 
 # Creates a personal fit config file from a template if it doesn't already exist. Asks for user input to fill in the template.
 setup_gitconfig () {
@@ -177,11 +161,11 @@ install_dotfiles
 
 # Install all additional software: Homebrew and the Brewfile on macOS, the Aptfile on Linux, then uv, Python, etc.
 info "Installing dependencies..."
-if "$DOTFILES_ROOT/bin/dotfiles-update" | while read -r data; do info "$data"; done
+if "$DOTFILES_ROOT/bin/dotfiles-update"
 then
   success "Dependencies installed successfully!"
 else
-  fail "Error installing dependencies"
+  error "Error installing dependencies"
 fi
 
 echo ''  # empty line

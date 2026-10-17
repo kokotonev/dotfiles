@@ -8,22 +8,23 @@
 
 PYTHON_VERSION=3.14
 
+. "${DOTFILES:-$HOME/.dotfiles}/script/output_format"
+
 # The standalone uv lives in ~/.local/bin too. On a first bootstrap the shell config isn't loaded yet,
 # so add it to PATH here as well.
 export PATH="$HOME/.local/bin:$PATH"
 
 # On macOS uv comes from the Brewfile. Elsewhere (Linux), install it with uv's official installer.
-# UV_NO_MODIFY_PATH stops the installer from adding lines to ~/.bashrc and friends: they're symlinks
-# into this repo, and python/path.sh already puts ~/.local/bin on PATH.
+# UV_NO_MODIFY_PATH stops the installer from adding lines to ~/.bashrc and other symlinked files in the repo.
 if ! command -v uv >/dev/null 2>&1
 then
-  echo "Installing uv"
+  info "Installing uv"
   curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh
 fi
 
 if ! command -v uv >/dev/null 2>&1
 then
-  echo "uv isn't installed, skipping Python"
+  warn "uv isn't installed, skipping Python"
   exit 0
 fi
 

@@ -6,13 +6,15 @@
 # named install.sh so script/install doesn't run it a second time. It has no .sh extension
 # so the shells don't source it as config.
 
+. "$(dirname "$0")/../script/output_format"
+
 # Adding Homebrew to PATH if it's installed, but not on PATH yet. Doing nothing if it is not installed.
 . "$(dirname "$0")/path.sh"
 
 # Checking if Homebrew is on PATH (which would mean it is installed). If not, we install it.
 if ! command -v brew >/dev/null 2>&1
 then
-  echo "  Installing Homebrew for you."
+  info "Installing Homebrew"
 
   # The same installer handles both macOS and Linux
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"

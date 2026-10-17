@@ -6,19 +6,23 @@ set -e
 
 cd "$(dirname $0)"/..
 
+# The topic installers use it to find the repo, e.g. for script/output_format
+export DOTFILES="$(pwd -P)"
+
+# Output formatting helpers: info, success, warn, error
+. script/output_format
+
 install_brew_packages () {
   if ! command -v brew >/dev/null 2>&1
   then
-    echo "Homebrew isn't installed. Run homebrew/bootstrap (or bin/dotfiles-update) first." >&2
-    exit 1
+    error "Homebrew isn't installed. Run homebrew/bootstrap (or bin/dotfiles-update) first."
   fi
 
-  echo "Installing dependencies from Brewfile..."
-  echo "› brew bundle"
+  info "Installing dependencies from Brewfile..."
+  info "› brew bundle"
   # Not fatal: e.g. a cask whose app is already in /Applications fails, but everything else still installs
-  brew bundle || echo "Some Brewfile entries failed to install (see above), continuing"
+  brew bundle || warn "Some Brewfile entries failed to install (see above), continuing"
 
-  echo "Linking keg-only formulae..."
   link_keg_only
 }
 
@@ -28,14 +32,15 @@ link_keg_only () {
   do
     # Homebrew keeps a symlink here for every linked keg, so skip the ones already linked
     [ -L "$(brew --prefix)/var/homebrew/linked/$formula" ] && continue
-    brew link --force "$formula" || echo "Couldn't link $formula" >&2
+    info "› brew link $formula"
+    brew link --force "$formula" || warn "Couldn't link $formula"
   done
 }
 
 install_apt_packages () {
   if ! command -v apt-get >/dev/null 2>&1
   then
-    echo "No apt-get on this system, skipping the Aptfile"
+    warn "No apt-get on this system, skipping the Aptfile"
     return
   fi
 
@@ -49,15 +54,15 @@ install_apt_packages () {
 
   if [ ${#missing[@]} -eq 0 ]
   then
-    echo "All Aptfile packages are installed"
+    success "All Aptfile packages are installed"
     return
   fi
 
-  echo "Installing from Aptfile: ${missing[*]}"
-  echo "› sudo apt-get update"
+  info "Installing from Aptfile: ${missing[*]}"
+  info "› sudo apt-get update"
   if ! sudo apt-get update -qq
   then
-    echo "Couldn't run apt-get with sudo, skipping the Aptfile"
+    warn "Couldn't run apt-get with sudo, skipping the Aptfile"
     return
   fi
 
@@ -65,8 +70,8 @@ install_apt_packages () {
   # DEBIAN_FRONTEND=noninteractive stops packages from stopping to ask questions (e.g. tzdata).
   for pkg in "${missing[@]}"
   do
-    echo "› sudo apt-get install $pkg"
-    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$pkg" || echo "Couldn't install $pkg, skipping"
+    info "› sudo apt-get install $pkg"
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$pkg" || warn "Couldn't install $pkg, skipping"
   done
 }
 
@@ -76,5 +81,9 @@ case "$(uname -s)" in
 esac
 
 # find the installers and run them iteratively. One that fails doesn't stop the others.
-echo "Running topic installers..."
-find . -name install.sh | while read installer ; do sh -c "${installer}" || echo "${installer} failed, continuing" ; done
+info "Running topic installers..."
+find . -name install.sh | while read installer
+do
+  info "› ${installer#./}"
+  sh -c "${installer}" || warn "${installer#./} failed, continuing"
+done

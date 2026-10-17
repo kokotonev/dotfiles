@@ -11,11 +11,13 @@
 
 NODE_VERSION=24
 
+. "${DOTFILES:-$HOME/.dotfiles}/script/output_format"
+
 export NVM_DIR="$HOME/.nvm"
 
 if [ ! -d "$NVM_DIR" ]
 then
-  echo "Installing nvm"
+  info "Installing nvm"
   git clone --quiet https://github.com/nvm-sh/nvm.git "$NVM_DIR"
 fi
 
@@ -28,12 +30,12 @@ then
     git -C "$NVM_DIR" -c advice.detachedHead=false checkout --quiet "$latest_nvm"
   fi
 else
-  echo "$NVM_DIR isn't a git clone, so it isn't updated"
+  warn "$NVM_DIR isn't a git clone, so it isn't updated"
 fi
 
 if ! [ -s "$NVM_DIR/nvm.sh" ]
 then
-  echo "nvm isn't installed, skipping Node.js"
+  warn "nvm isn't installed, skipping Node.js"
   exit 0
 fi
 

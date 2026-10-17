@@ -1,0 +1,38 @@
+# Output helpers for the setup scripts (script/bootstrap, bin/dotfiles-update, script/install and the
+# <topic>/install.sh files), so all their messages share one format. Load it with:
+#
+#   . "$DOTFILES/script/output_format"
+#
+# Plain POSIX sh, since some installers are sh scripts. No .sh extension, so the shells don't load it as config.
+
+# Portions of this file are derived from:
+# https://github.com/holman/dotfiles
+#
+# Copyright (c) Zach Holman
+# Licensed under the MIT License.
+# See licenses/holman-mit.md
+
+info () {
+  printf "\r  [ \033[00;34mINFO\033[0m ] %s\n" "$1"  # [ INFO ] in blue
+}
+
+# $1 is used as the printf format, so the question can contain \n
+ask_user () {
+  printf "\r  [ \033[0;33m??\033[0m ] $1\n"  # [ ?? ] in yellow
+}
+
+success () {
+  printf "\r\033[2K  [ \033[00;32mOK\033[0m ] %s\n" "$1"  # [ OK ] in green
+}
+
+# Something was skipped or went wrong, but the script carries on
+warn () {
+  printf "\r\033[2K  [ \033[0;33mWARNING\033[0m ] %s\n" "$1"  # [ WARNING ] in yellow
+}
+
+# Something went wrong and the script stops
+error () {
+  printf "\r\033[2K  [ \033[0;31mERROR\033[0m ] %s\n" "$1"  # [ ERROR ] in red
+  echo ''
+  exit 1
+}

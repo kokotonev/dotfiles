@@ -43,10 +43,13 @@ done
 
 export DOTFILES="$dotfilesDirectory"
 
+# Output formatting helpers: info, success, warn, error
+. "$DOTFILES/script/output_format"
+
 # Update dotfiles themselves. Not fatal: local changes or a missing upstream shouldn't block installing software.
-echo "Updating dotfiles..."
-echo "› git pull"
-git -C "$DOTFILES" pull --ff-only || echo "Couldn't pull the latest dotfiles, continuing with the local copy"
+info "Updating dotfiles..."
+info "› git pull"
+git -C "$DOTFILES" pull --ff-only || warn "Couldn't pull the latest dotfiles, continuing with the local copy"
 
 # On macOS, install and upgrade Homebrew and everything it installed.
 # On Linux, apt packages aren't upgraded here: that's the system's job (`sudo apt upgrade`, and
@@ -54,19 +57,19 @@ git -C "$DOTFILES" pull --ff-only || echo "Couldn't pull the latest dotfiles, co
 if [ "$(uname -s)" = Darwin ]
 then
   # Install homebrew
-  "$DOTFILES/homebrew/bootstrap" 2>&1
+  "$DOTFILES/homebrew/bootstrap"
 
   # Add Homebrew to PATH (bootstrap runs in its own process, so it doesn't affect this script's PATH)
   . "$DOTFILES/homebrew/path.sh"
 
   # Upgrade homebrew
-  echo "› brew update"
+  info "› brew update"
   brew update
 
-  echo "› brew upgrade"
+  info "› brew upgrade"
   brew upgrade
 fi
 
 # Install software
-echo "› script/install"
+info "› script/install"
 "$DOTFILES/script/install"
