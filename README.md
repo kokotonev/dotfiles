@@ -19,7 +19,7 @@ Then open a new terminal.
 
 `script/bootstrap` does three things:
 
-1. **Creates your local git config.** It asks for your git author name and email and generates `git/gitconfig.local.symlink` from `git/gitconfig.local.symlink.example`. The credential helper is set to `osxkeychain` on macOS and `cache` on Linux. The generated file is gitignored, and the step is skipped if the file already exists.
+1. **Creates your local git config.** It asks for your git author name and email and generates `git/gitconfig.local.symlink` from `git/gitconfig.local.symlink.example`. The credential helper, which stores your GitHub login for `git push`, is set to `osxkeychain` (the macOS Keychain) on macOS and to the GitHub CLI on Linux (see [Linux notes](#linux-notes)). The generated file is gitignored, and the step is skipped if the file already exists.
 2. **Links the dotfiles.** Every `<topic>/<name>.symlink` becomes a symlink at `~/.<name>`. If a file already exists there, you're asked what to do:
    - `s` / `S`: skip this file / skip all
    - `o` / `O`: overwrite this file / overwrite all
@@ -95,6 +95,9 @@ If the server already had another PostgreSQL version, version 18 is installed ne
 
 ### Linux notes
 
+- **GitHub login:** after bootstrap, run `gh auth login` once, and git uses that login for `git push` from then on. Pick GitHub.com, then HTTPS, then answer **No** to "Authenticate Git with your GitHub credentials?": git is already set up to use gh, and answering yes would make gh write into `~/.gitconfig`, which is this repo's `git/gitconfig.symlink`. Then choose to log in with a web browser: the server shows a code that you enter at [github.com/login/device](https://github.com/login/device) on any machine, so the server itself doesn't need a browser. Cloning and pulling this repo don't need a login, since it's public.
+
+  `gh` comes from the Aptfile, and Ubuntu only has it from 22.04 on. On an older release, install it from [GitHub's own apt repository](https://github.com/cli/cli/blob/trunk/docs/install_linux.md); until then, `git push` shows a "gh: not found" error and falls back to asking for your username and a token.
 - **`~/.profile`** stays as Ubuntu made it. It's what SSH logins read, and it loads `~/.bashrc`. Don't create a `~/.bash_profile`: bash would read that one instead and skip `~/.profile`.
 
 ## How it works

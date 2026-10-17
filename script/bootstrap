@@ -31,8 +31,9 @@ setup_gitconfig () {
   then
     info 'Setup gitconfig'
 
-    # Picks a git credential helper, depending on the OS. Defaults to 'cache' for Linux and 'osxkeychain' for Mac.
-    git_credential='cache'
+    # Picks a git credential helper, depending on the OS: the macOS Keychain on a Mac, the GitHub CLI's login
+    # on Linux (`gh auth login`, see README). gh comes from the Aptfile, which is installed later in this script.
+    git_credential='!gh auth git-credential'
     if [ "$(uname -s)" == "Darwin" ]
     then
       git_credential='osxkeychain'
