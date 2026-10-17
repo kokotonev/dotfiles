@@ -175,16 +175,13 @@ install_dotfiles () {
 setup_gitconfig
 install_dotfiles
 
-# If we're on a Mac, let's install and setup all additional stuff like homebrew, uv, etc.
-if [ "$(uname -s)" == "Darwin" ]
+# Install all additional software: Homebrew and the Brewfile on macOS, the Aptfile on Linux, then uv, Python, etc.
+info "Installing dependencies..."
+if "$DOTFILES_ROOT/bin/dotfiles-update" | while read -r data; do info "$data"; done
 then
-  info "Installing dependencies..."
-  if "$DOTFILES_ROOT/bin/dotfiles-update" | while read -r data; do info "$data"; done
-  then
-    success "Dependencies installed successfully!"
-  else
-    fail "Error installing dependencies"
-  fi
+  success "Dependencies installed successfully!"
+else
+  fail "Error installing dependencies"
 fi
 
 echo ''  # empty line

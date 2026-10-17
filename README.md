@@ -27,38 +27,53 @@ Then open a new terminal.
 
    Press only one of these keys. Any other key, including Enter, aborts the script. Nothing is lost if that happens; just run it again.
 
-   Both `~/.zshrc` and `~/.bashrc` are linked on every machine; the one for a shell you don't use is simply never read. On Linux, Ubuntu's default `~/.bashrc` already exists, so expect to be asked about it. Answer `b`: the parts of it worth keeping are already in `bash/`, and the backup lets you check for anything else (see [Linux notes](#linux-notes)).
+   Both `~/.zshrc` and `~/.bashrc` are linked on every machine; the one for a shell you don't use is simply never read. On Linux, Ubuntu's default `~/.bashrc` already exists, so expect to be asked about it. Answer `b`: the parts of it worth keeping are already in `bash/`.
 
-3. **Installs software (macOS only).** It runs `bin/dotfiles-update`, which:
+3. **Installs software.** It runs `bin/dotfiles-update`, which:
    - pulls the latest dotfiles,
-   - installs [Homebrew](https://brew.sh) if it's missing (asks for your password), then runs `brew update` and `brew upgrade`,
-   - runs `script/install`, which installs everything in the [Brewfile](Brewfile) with `brew bundle` and then runs every `<topic>/install.sh` (e.g. `python/install.sh` installs the latest Python with uv).
+   - on macOS, installs [Homebrew](https://brew.sh) if it's missing (asks for your password), then runs `brew update` and `brew upgrade`,
+   - runs `script/install`, which installs the system packages and then runs every `<topic>/install.sh`:
+     - **macOS:** everything in the [Brewfile](Brewfile), with `brew bundle`.
+     - **Linux:** the packages from the [Aptfile](Aptfile) that aren't installed yet, with `sudo apt-get`.
+     - `python/install.sh` installs uv if it's missing (on Linux, from uv's official installer), then the latest Python with uv.
+     - `node/install.sh` installs or updates nvm, then Node.js with nvm (see [Node.js](#nodejs)).
+     - `postgres/install.sh` installs PostgreSQL on Linux (see [PostgreSQL](#postgresql)).
 
    If an app from the Brewfile is already in `/Applications` but wasn't installed with Homebrew, `brew bundle` reports it as failed and moves on. To hand such an app over to Homebrew, run `brew install --cask --force <cask>` once.
+
+   On Linux, `sudo` is only used when something is actually missing, so a routine `dotfiles-update` doesn't ask for your password. Without sudo rights (e.g. on a work server), the apt and PostgreSQL steps are skipped with a message and the rest still runs. `dotfiles-update` never runs `apt upgrade`: keeping system packages up to date is left to `sudo apt upgrade` and Ubuntu's automatic security updates.
 
 You can run bootstrap again at any time. Files that already point to the right place are skipped without asking. Answering `b` again for a file replaces any existing `.backup` of it.
 
 To update the dotfiles and all software later, run `dotfiles-update` from any terminal.
 
-These tools aren't installed by bootstrap, but the config uses them if they're there:
+The [Google Cloud SDK](https://cloud.google.com/sdk) isn't installed by bootstrap. If it's in `~/Documents/google-cloud-sdk`, `gcloud/` puts it on `PATH` and loads its completion; otherwise it's skipped quietly.
 
-| Tool | Expected location | Used by | If it's missing |
-|---|---|---|---|
-| [nvm](https://github.com/nvm-sh/nvm) | `~/.nvm` | `node/` | Skipped quietly |
-| [Google Cloud SDK](https://cloud.google.com/sdk) | `~/Documents/google-cloud-sdk` | `gcloud/` | Skipped quietly |
-| VS Code `code` command | on `$PATH` | `shell/editor.sh` (`$EDITOR`, used by git for commit messages) | `$EDITOR` falls back to `nano`. Installing the `visual-studio-code` cask provides it. |
+`$EDITOR`, which git uses for commit messages, is VS Code (`code --wait`) wherever the `code` command exists. On macOS, the `visual-studio-code` cask in the Brewfile provides it. On a server, it's there in VS Code's terminal when you connect with Remote SSH. Everywhere else, `$EDITOR` is `nano` (see `shell/editor.sh`).
 
 ### Python
 
-Python is managed by [uv](https://docs.astral.sh/uv/), not Homebrew. `python` and `python3` live in `~/.local/bin`.
+Python is managed by [uv](https://docs.astral.sh/uv/), not Homebrew or apt. `python` and `python3` live in `~/.local/bin`. On Linux, uv itself lives there too and is updated with `uv self update` on every `dotfiles-update`; on macOS it comes from the Brewfile. The system's own `/usr/bin/python3` on Linux is left alone, since Ubuntu's tools rely on it.
 
 - `uv python install 3.13`: install another version; `uv python list`: see what's installed
 - `uv init` / `uv add <package>` / `uv sync`: manage a project and its `.venv`
 - `uv tool install <tool>`: install a command-line tool globally (e.g. `ruff`, `ipython`)
 
+### Node.js
+
+Node.js is managed by [nvm](https://github.com/nvm-sh/nvm), on both systems. `node/install.sh` clones nvm into `~/.nvm` and updates it to its latest release on every `dotfiles-update`. It isn't installed with Homebrew or apt: nvm doesn't support Homebrew installs, and Ubuntu doesn't package it.
+
+The installer pins Node.js to major version 24 and makes it the default for new shells. Each update picks up the newest 24.x release and moves your global npm packages over to it. To switch to another major version, change `NODE_VERSION` in `node/install.sh`.
+
+- `nvm ls`: see what's installed; `nvm install 22` / `nvm use 22`: install / switch the current shell to another version
+- `nvm uninstall <version>`: remove an old version (updates leave the previous ones installed)
+- A project's `.nvmrc` file pins its Node version; run `nvm use` in that folder to switch to it
+
 ### PostgreSQL
 
-The Brewfile installs `postgresql@18`. Its data lives in `/opt/homebrew/var/postgresql@18`, and your macOS user is the superuser (no password locally).
+PostgreSQL 18 on both systems. To move to another major version, change it in both places: `postgresql@18` in the Brewfile and `PG_VERSION` in `postgres/install.sh`.
+
+**macOS:** the Brewfile installs `postgresql@18`. Its data lives in `/opt/homebrew/var/postgresql@18`, and your macOS user is the superuser (no password locally).
 
 | Command | What it does |
 |---|---|
@@ -66,6 +81,17 @@ The Brewfile installs `postgresql@18`. Its data lives in `/opt/homebrew/var/post
 | `brew services stop postgresql@18` | Stop it and don't start it on login |
 | `brew services run postgresql@18` | Start it now only, not on login |
 | `brew services list` | Show whether it's running |
+
+**Linux:** `postgres/install.sh` installs `postgresql-18` from the PostgreSQL project's apt repository ([apt.postgresql.org](https://wiki.postgresql.org/wiki/Apt)), because Ubuntu's own repositories have only one, older version per release. It runs as a system service that starts at boot and only listens on localhost. Its data lives in `/var/lib/postgresql/18/main`. Like on the Mac, your Linux user is a superuser, with a database of its own name, so `psql` works without a password.
+
+| Command | What it does |
+|---|---|
+| `sudo systemctl status postgresql` | Show whether it's running |
+| `sudo systemctl stop postgresql` / `start postgresql` | Stop / start it |
+| `sudo systemctl disable postgresql` / `enable postgresql` | Don't / do start it at boot |
+| `pg_lsclusters` | List the installed versions with their port, status and data directory |
+
+If the server already had another PostgreSQL version, version 18 is installed next to it, on the next free port (usually 5433). `pg_lsclusters` shows which is which.
 
 ### Linux notes
 
@@ -79,7 +105,7 @@ Everything is grouped into topic folders (`git/`, `zsh/`, `bash/`, `node/`, …)
 |---|---|
 | `.sh` | Shared config: aliases, `PATH`, exports. Write it so it works in both zsh and bash (no `setopt`, `zstyle`, `shopt`, `%F{…}` and so on). |
 | `.zsh` | zsh-only config |
-| `.bash` | bash-only config, mainly for Linux. Keep it working with bash 3.2: then it works on any server, however old, and you can test it on the Mac (macOS ships 3.2). In practice: `[[ ]]` and `(( ))` are fine, `mapfile`, `PROMPT_COMMAND` arrays and `**` globs aren't. |
+| `.bash` | bash-only config, mainly for Linux. Keep it working with bash 3.2+ |
 
 `~/.zshrc` loads every `*.sh` and `*.zsh` file in every topic, and `~/.bashrc` every `*.sh` and `*.bash` file. Both sort them alphabetically by path and load them in three phases:
 

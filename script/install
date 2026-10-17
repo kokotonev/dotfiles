@@ -1,19 +1,29 @@
 #!/usr/bin/env bash
 #
-# Run all topic dotfiles installers.
+# Installs the system packages (Brewfile on macOS, Aptfile on Linux), then runs all topic installers.
 
 set -e
 
 cd "$(dirname $0)"/..
 
-if ! command -v brew >/dev/null 2>&1
-then
-  echo "Homebrew isn't installed. Run homebrew/bootstrap (or bin/dotfiles-update) first." >&2
-  exit 1
-fi
+install_brew_packages () {
+  if ! command -v brew >/dev/null 2>&1
+  then
+    echo "Homebrew isn't installed. Run homebrew/bootstrap (or bin/dotfiles-update) first." >&2
+    exit 1
+  fi
+
+  echo "Installing dependencies from Brewfile..."
+  echo "› brew bundle"
+  # Not fatal: e.g. a cask whose app is already in /Applications fails, but everything else still installs
+  brew bundle || echo "Some Brewfile entries failed to install (see above), continuing"
+
+  echo "Linking keg-only formulae..."
+  link_keg_only
+}
 
 # Keg-only formulae aren't linked into PATH by default, so link the ones we want
-link_keg_only() {
+link_keg_only () {
   for formula in $(brew list --formula -1 | grep '^postgresql@')
   do
     # Homebrew keeps a symlink here for every linked keg, so skip the ones already linked
@@ -22,14 +32,49 @@ link_keg_only() {
   done
 }
 
-echo "Installing dependencies from Brewfile..."
-echo "› brew bundle"
-# Not fatal: e.g. a cask whose app is already in /Applications fails, but everything else still installs
-brew bundle || echo "Some Brewfile entries failed to install (see above), continuing"
+install_apt_packages () {
+  if ! command -v apt-get >/dev/null 2>&1
+  then
+    echo "No apt-get on this system, skipping the Aptfile"
+    return
+  fi
 
-echo "Linking keg-only formulae..."
-link_keg_only
+  # Find the Aptfile packages that aren't installed yet. Checking needs no sudo, so when nothing is
+  # missing (e.g. on a routine dotfiles-update), nothing asks for your password.
+  local pkg missing=()
+  for pkg in $(sed 's/#.*//' Aptfile)
+  do
+    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'ok installed' || missing+=("$pkg")
+  done
 
-# find the installers and run them iteratively
+  if [ ${#missing[@]} -eq 0 ]
+  then
+    echo "All Aptfile packages are installed"
+    return
+  fi
+
+  echo "Installing from Aptfile: ${missing[*]}"
+  echo "› sudo apt-get update"
+  if ! sudo apt-get update -qq
+  then
+    echo "Couldn't run apt-get with sudo, skipping the Aptfile"
+    return
+  fi
+
+  # One at a time, so a package this release doesn't have doesn't stop the others.
+  # DEBIAN_FRONTEND=noninteractive stops packages from stopping to ask questions (e.g. tzdata).
+  for pkg in "${missing[@]}"
+  do
+    echo "› sudo apt-get install $pkg"
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$pkg" || echo "Couldn't install $pkg, skipping"
+  done
+}
+
+case "$(uname -s)" in
+  Darwin) install_brew_packages ;;
+  Linux) install_apt_packages ;;
+esac
+
+# find the installers and run them iteratively. One that fails doesn't stop the others.
 echo "Running topic installers..."
-find . -name install.sh | while read installer ; do sh -c "${installer}" ; done
+find . -name install.sh | while read installer ; do sh -c "${installer}" || echo "${installer} failed, continuing" ; done

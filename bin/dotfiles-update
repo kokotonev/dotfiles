@@ -48,18 +48,24 @@ echo "Updating dotfiles..."
 echo "› git pull"
 git -C "$DOTFILES" pull --ff-only || echo "Couldn't pull the latest dotfiles, continuing with the local copy"
 
-# Install homebrew
-"$DOTFILES/homebrew/bootstrap" 2>&1
+# On macOS, install and upgrade Homebrew and everything it installed.
+# On Linux, apt packages aren't upgraded here: that's the system's job (`sudo apt upgrade`, and
+# unattended-upgrades, which Ubuntu runs for security updates). script/install only adds missing ones.
+if [ "$(uname -s)" = Darwin ]
+then
+  # Install homebrew
+  "$DOTFILES/homebrew/bootstrap" 2>&1
 
-# Add Homebrew to PATH (bootstrap runs in its own process, so it doesn't affect this script's PATH)
-. "$DOTFILES/homebrew/path.sh"
+  # Add Homebrew to PATH (bootstrap runs in its own process, so it doesn't affect this script's PATH)
+  . "$DOTFILES/homebrew/path.sh"
 
-# Upgrade homebrew
-echo "› brew update"
-brew update
+  # Upgrade homebrew
+  echo "› brew update"
+  brew update
 
-echo "› brew upgrade"
-brew upgrade
+  echo "› brew upgrade"
+  brew upgrade
+fi
 
 # Install software
 echo "› script/install"

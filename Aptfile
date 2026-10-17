@@ -1,0 +1,12 @@
+# apt packages for Linux: the Brewfile's counterpart. script/install installs the ones that are missing.
+# A package this Ubuntu release doesn't have is skipped.
+#
+# PostgreSQL and uv aren't here, because they don't come from Ubuntu's repositories:
+# postgres/install.sh and python/install.sh install them.
+
+git
+curl
+ca-certificates
+build-essential   # C compiler etc., for Python packages that have to build C extensions
+tree
+gh                # GitHub CLI. Ubuntu's version lags behind GitHub's, and it's missing before 22.04
